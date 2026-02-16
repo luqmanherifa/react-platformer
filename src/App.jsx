@@ -132,27 +132,6 @@ export default function App() {
       player.setCollideWorldBounds(true);
       player.setScale(2);
 
-      enemies = this.physics.add.group();
-      const enemy = enemies.create(600, 100, "enemy_run");
-      enemy.setCollideWorldBounds(true);
-      enemy.setVelocityX(-150);
-      enemy.setScale(2);
-      enemy.setFlipX(true);
-
-      bullets = this.physics.add.group();
-
-      this.physics.add.collider(player, platforms);
-      this.physics.add.collider(enemies, platforms);
-
-      this.physics.add.overlap(player, enemies, () => {
-        console.log("Player hit!");
-      });
-
-      this.physics.add.overlap(bullets, enemies, (bullet, enemy) => {
-        bullet.destroy();
-        enemy.destroy();
-      });
-
       this.anims.create({
         key: "banana_spin",
         frames: this.anims.generateFrameNumbers("banana", {
@@ -211,8 +190,38 @@ export default function App() {
         repeat: -1,
       });
 
+      enemies = this.physics.add.group();
+
+      const spawnEnemy = (scene) => {
+        const enemy = enemies.create(width - 150, 100, "enemy_run");
+        enemy.setCollideWorldBounds(true);
+        enemy.setVelocityX(-150);
+        enemy.setScale(2);
+        enemy.setFlipX(true);
+        enemy.anims.play("enemy_run", true);
+      };
+
+      spawnEnemy(this);
+
+      bullets = this.physics.add.group();
+
+      this.physics.add.collider(player, platforms);
+      this.physics.add.collider(enemies, platforms);
+
+      this.physics.add.overlap(player, enemies, () => {
+        console.log("Player hit!");
+      });
+
+      this.physics.add.overlap(bullets, enemies, (bullet, enemy) => {
+        bullet.destroy();
+        enemy.destroy();
+
+        this.time.delayedCall(3000, () => {
+          spawnEnemy(this);
+        });
+      });
+
       player.anims.play("idle", true);
-      enemy.anims.play("enemy_run", true);
 
       keys = this.input.keyboard.addKeys({
         up: "W",
