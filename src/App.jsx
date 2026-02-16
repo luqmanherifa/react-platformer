@@ -12,9 +12,10 @@ export default function App() {
 
     const config = {
       type: Phaser.AUTO,
-      width: 800,
-      height: 500,
+      width: window.innerWidth,
+      height: window.innerHeight,
       parent: "game-container",
+      backgroundColor: "#87CEEB",
       physics: {
         default: "arcade",
         arcade: {
@@ -33,36 +34,67 @@ export default function App() {
     gameRef.current = game;
 
     function preload() {
-      this.load.image(
-        "ground",
-        "https://labs.phaser.io/assets/sprites/platform.png",
-      );
-
-      this.load.image("sky", "https://labs.phaser.io/assets/skies/sky4.png");
+      this.load.spritesheet("terrain", "/assets/Terrain/Terrain (16x16).png", {
+        frameWidth: 16,
+        frameHeight: 16,
+      });
 
       this.load.spritesheet(
-        "player",
-        "https://labs.phaser.io/assets/sprites/dude.png",
-        { frameWidth: 32, frameHeight: 48 },
+        "player_idle",
+        "/assets/Main Characters/Virtual Guy/Idle (32x32).png",
+        { frameWidth: 32, frameHeight: 32 },
       );
 
-      this.load.image("enemy", "https://labs.phaser.io/assets/sprites/ufo.png");
+      this.load.spritesheet(
+        "player_run",
+        "/assets/Main Characters/Virtual Guy/Run (32x32).png",
+        { frameWidth: 32, frameHeight: 32 },
+      );
+
+      this.load.spritesheet(
+        "player_jump",
+        "/assets/Main Characters/Virtual Guy/Jump (32x32).png",
+        { frameWidth: 32, frameHeight: 32 },
+      );
+
+      this.load.spritesheet(
+        "player_fall",
+        "/assets/Main Characters/Virtual Guy/Fall (32x32).png",
+        { frameWidth: 32, frameHeight: 32 },
+      );
+
+      this.load.spritesheet("enemy", "/assets/Terrain/Terrain (16x16).png", {
+        frameWidth: 16,
+        frameHeight: 16,
+      });
     }
 
     function create() {
-      this.add.image(400, 250, "sky");
+      const width = this.cameras.main.width;
+      const height = this.cameras.main.height;
 
       const platforms = this.physics.add.staticGroup();
-      platforms.create(400, 490, "ground").setScale(2).refreshBody();
 
-      player = this.physics.add.sprite(100, 300, "player");
+      const groundY = height - 32;
+      const tileSize = 16;
+      const tilesNeeded = Math.ceil(width / tileSize) + 2;
+
+      for (let i = 0; i < tilesNeeded; i++) {
+        const tile = platforms.create(i * tileSize, groundY, "terrain", 0);
+        tile.setScale(2);
+        tile.refreshBody();
+      }
+
+      player = this.physics.add.sprite(100, 300, "player_idle");
       player.setBounce(0.1);
       player.setCollideWorldBounds(true);
+      player.setScale(2);
 
       enemies = this.physics.add.group();
-      const enemy = enemies.create(600, 300, "enemy");
+      const enemy = enemies.create(600, 300, "enemy", 22);
       enemy.setCollideWorldBounds(true);
       enemy.setVelocityX(-100);
+      enemy.setScale(2);
 
       this.physics.add.collider(player, platforms);
       this.physics.add.collider(enemies, platforms);
@@ -72,30 +104,44 @@ export default function App() {
       });
 
       this.anims.create({
-        key: "left",
-        frames: this.anims.generateFrameNumbers("player", {
+        key: "idle",
+        frames: this.anims.generateFrameNumbers("player_idle", {
           start: 0,
-          end: 3,
+          end: 10,
         }),
         frameRate: 10,
         repeat: -1,
       });
 
       this.anims.create({
-        key: "turn",
-        frames: [{ key: "player", frame: 4 }],
-        frameRate: 20,
+        key: "run",
+        frames: this.anims.generateFrameNumbers("player_run", {
+          start: 0,
+          end: 11,
+        }),
+        frameRate: 12,
+        repeat: -1,
       });
 
       this.anims.create({
-        key: "right",
-        frames: this.anims.generateFrameNumbers("player", {
-          start: 5,
-          end: 8,
+        key: "jump",
+        frames: this.anims.generateFrameNumbers("player_jump", {
+          start: 0,
+          end: 0,
         }),
         frameRate: 10,
-        repeat: -1,
       });
+
+      this.anims.create({
+        key: "fall",
+        frames: this.anims.generateFrameNumbers("player_fall", {
+          start: 0,
+          end: 0,
+        }),
+        frameRate: 10,
+      });
+
+      player.anims.play("idle", true);
 
       keys = this.input.keyboard.addKeys({
         up: "W",
@@ -110,13 +156,21 @@ export default function App() {
 
       if (keys.left.isDown) {
         player.setVelocityX(-speed);
-        player.anims.play("left", true);
+        player.setFlipX(true);
+        if (player.body.touching.down) {
+          player.anims.play("run", true);
+        }
       } else if (keys.right.isDown) {
         player.setVelocityX(speed);
-        player.anims.play("right", true);
+        player.setFlipX(false);
+        if (player.body.touching.down) {
+          player.anims.play("run", true);
+        }
       } else {
         player.setVelocityX(0);
-        player.anims.play("turn");
+        if (player.body.touching.down) {
+          player.anims.play("idle", true);
+        }
       }
 
       if (keys.up.isDown && player.body.touching.down) {
@@ -124,7 +178,11 @@ export default function App() {
       }
 
       if (!player.body.touching.down) {
-        player.setFrame(4);
+        if (player.body.velocity.y < 0) {
+          player.anims.play("jump", true);
+        } else {
+          player.anims.play("fall", true);
+        }
       }
 
       if (keys.attack.isDown && canAttack) {
@@ -152,24 +210,37 @@ export default function App() {
       }
     }
 
+    const handleResize = () => {
+      game.scale.resize(window.innerWidth, window.innerHeight);
+    };
+
+    window.addEventListener("resize", handleResize);
+
     return () => {
+      window.removeEventListener("resize", handleResize);
       game.destroy(true);
     };
   }, []);
 
   return (
-    <div className="w-screen h-screen bg-black flex flex-col items-center justify-center text-white">
-      <h1 className="text-2xl font-bold mb-2">
-        2D Platformer - React + Phaser
-      </h1>
+    <div className="w-screen h-screen bg-sky-400 relative overflow-hidden">
+      <div className="absolute top-4 left-4 z-10 bg-white/90 rounded-lg p-3 shadow-lg">
+        <h1 className="text-xl font-bold mb-2">2D Platformer</h1>
 
-      <div id="game-container" className="border-4 border-white shadow-xl" />
-
-      <div className="mt-4 text-sm opacity-70 text-center space-y-1">
-        <p>Move: A / D</p>
-        <p>Jump: W</p>
-        <p>Attack: F</p>
+        <div className="text-sm space-y-1">
+          <p>
+            <strong>A / D</strong> - Move
+          </p>
+          <p>
+            <strong>W</strong> - Jump
+          </p>
+          <p>
+            <strong>F</strong> - Attack
+          </p>
+        </div>
       </div>
+
+      <div id="game-container" className="w-full h-full" />
     </div>
   );
 }
