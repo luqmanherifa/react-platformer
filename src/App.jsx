@@ -5,6 +5,11 @@ export default function App() {
   const gameRef = useRef(null);
 
   useEffect(() => {
+    let player;
+    let keys;
+    let enemies;
+    let canAttack = true;
+
     const config = {
       type: Phaser.AUTO,
       width: 800,
@@ -27,22 +32,20 @@ export default function App() {
     const game = new Phaser.Game(config);
     gameRef.current = game;
 
-    let player;
-    let cursors;
-    let keys;
-    let enemies;
-    let canAttack = true;
-
     function preload() {
       this.load.image(
         "ground",
         "https://labs.phaser.io/assets/sprites/platform.png",
       );
+
       this.load.image("sky", "https://labs.phaser.io/assets/skies/sky4.png");
-      this.load.image(
+
+      this.load.spritesheet(
         "player",
-        "https://labs.phaser.io/assets/sprites/phaser-dude.png",
+        "https://labs.phaser.io/assets/sprites/dude.png",
+        { frameWidth: 32, frameHeight: 48 },
       );
+
       this.load.image("enemy", "https://labs.phaser.io/assets/sprites/ufo.png");
     }
 
@@ -53,8 +56,8 @@ export default function App() {
       platforms.create(400, 490, "ground").setScale(2).refreshBody();
 
       player = this.physics.add.sprite(100, 300, "player");
-      player.setCollideWorldBounds(true);
       player.setBounce(0.1);
+      player.setCollideWorldBounds(true);
 
       enemies = this.physics.add.group();
       const enemy = enemies.create(600, 300, "enemy");
@@ -68,6 +71,32 @@ export default function App() {
         console.log("Player hit!");
       });
 
+      this.anims.create({
+        key: "left",
+        frames: this.anims.generateFrameNumbers("player", {
+          start: 0,
+          end: 3,
+        }),
+        frameRate: 10,
+        repeat: -1,
+      });
+
+      this.anims.create({
+        key: "turn",
+        frames: [{ key: "player", frame: 4 }],
+        frameRate: 20,
+      });
+
+      this.anims.create({
+        key: "right",
+        frames: this.anims.generateFrameNumbers("player", {
+          start: 5,
+          end: 8,
+        }),
+        frameRate: 10,
+        repeat: -1,
+      });
+
       keys = this.input.keyboard.addKeys({
         up: "W",
         left: "A",
@@ -77,23 +106,32 @@ export default function App() {
     }
 
     function update() {
+      const speed = 220;
+
       if (keys.left.isDown) {
-        player.setVelocityX(-200);
+        player.setVelocityX(-speed);
+        player.anims.play("left", true);
       } else if (keys.right.isDown) {
-        player.setVelocityX(200);
+        player.setVelocityX(speed);
+        player.anims.play("right", true);
       } else {
         player.setVelocityX(0);
+        player.anims.play("turn");
       }
 
       if (keys.up.isDown && player.body.touching.down) {
-        player.setVelocityY(-400);
+        player.setVelocityY(-450);
+      }
+
+      if (!player.body.touching.down) {
+        player.setFrame(4);
       }
 
       if (keys.attack.isDown && canAttack) {
         canAttack = false;
 
         const attackZone = this.add.rectangle(
-          player.x + 40,
+          player.x + (player.flipX ? -40 : 40),
           player.y,
           40,
           40,
@@ -102,6 +140,7 @@ export default function App() {
         );
 
         this.physics.add.existing(attackZone);
+
         this.physics.add.overlap(attackZone, enemies, (zone, enemy) => {
           enemy.destroy();
         });
@@ -120,11 +159,13 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen bg-black flex flex-col items-center justify-center text-white">
-      <h1 className="text-2xl font-bold mb-2">2D Platformer React + Phaser</h1>
+      <h1 className="text-2xl font-bold mb-2">
+        2D Platformer - React + Phaser
+      </h1>
 
-      <div id="game-container" className="border-4 border-white" />
+      <div id="game-container" className="border-4 border-white shadow-xl" />
 
-      <div className="mt-4 text-sm opacity-70 text-center">
+      <div className="mt-4 text-sm opacity-70 text-center space-y-1">
         <p>Move: A / D</p>
         <p>Jump: W</p>
         <p>Attack: F</p>
