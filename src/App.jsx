@@ -35,12 +35,9 @@ export default function App() {
     gameRef.current = game;
 
     function preload() {
-      this.load.image("background", "/assets/Background/Brown.png");
+      this.load.image("background", "/assets/Background/Blue.png");
 
-      this.load.spritesheet("terrain", "/assets/Terrain/Terrain (16x16).png", {
-        frameWidth: 16,
-        frameHeight: 16,
-      });
+      this.load.image("terrain", "/assets/Terrain/Terrain.png");
 
       this.load.spritesheet(
         "player_idle",
@@ -94,14 +91,19 @@ export default function App() {
 
       const platforms = this.physics.add.staticGroup();
 
-      const groundY = height - 32;
-      const tileSize = 16;
-      const tilesNeeded = Math.ceil(width / tileSize) + 2;
+      const blockSize = 48;
+      const groundLevel = height - blockSize * 3;
+      const blocksNeeded = Math.ceil(width / blockSize) + 1;
 
-      for (let i = 0; i < tilesNeeded; i++) {
-        const tile = platforms.create(i * tileSize, groundY, "terrain", 0);
-        tile.setScale(2);
-        tile.refreshBody();
+      for (let layer = 0; layer < 3; layer++) {
+        for (let i = 0; i < blocksNeeded; i++) {
+          const block = platforms.create(
+            i * blockSize + blockSize / 2,
+            groundLevel + layer * blockSize + blockSize / 2,
+            "terrain",
+          );
+          block.refreshBody();
+        }
       }
 
       player = this.physics.add.sprite(100, 300, "player_idle");
