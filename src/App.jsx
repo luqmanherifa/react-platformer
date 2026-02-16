@@ -8,6 +8,7 @@ export default function App() {
     let player;
     let keys;
     let enemies;
+    let bullets;
     let canAttack = true;
 
     const config = {
@@ -70,6 +71,11 @@ export default function App() {
         "/assets/Main Characters/Mask Dude/Run (32x32).png",
         { frameWidth: 32, frameHeight: 32 },
       );
+
+      this.load.spritesheet("banana", "/assets/Items/Fruits/Bananas.png", {
+        frameWidth: 32,
+        frameHeight: 32,
+      });
     }
 
     function create() {
@@ -110,11 +116,28 @@ export default function App() {
       enemy.setScale(2);
       enemy.setFlipX(true);
 
+      bullets = this.physics.add.group();
+
       this.physics.add.collider(player, platforms);
       this.physics.add.collider(enemies, platforms);
 
       this.physics.add.overlap(player, enemies, () => {
         console.log("Player hit!");
+      });
+
+      this.physics.add.overlap(bullets, enemies, (bullet, enemy) => {
+        bullet.destroy();
+        enemy.destroy();
+      });
+
+      this.anims.create({
+        key: "banana_spin",
+        frames: this.anims.generateFrameNumbers("banana", {
+          start: 0,
+          end: 16,
+        }),
+        frameRate: 20,
+        repeat: -1,
       });
 
       this.anims.create({
@@ -223,25 +246,20 @@ export default function App() {
       if (keys.attack.isDown && canAttack) {
         canAttack = false;
 
-        const attackZone = this.add.rectangle(
-          player.x + (player.flipX ? -40 : 40),
-          player.y,
-          40,
-          40,
-          0xff0000,
-          0.3,
-        );
+        const bullet = bullets.create(player.x, player.y, "banana");
+        bullet.setScale(1.5);
+        bullet.anims.play("banana_spin", true);
+        bullet.body.setAllowGravity(false);
 
-        this.physics.add.existing(attackZone);
-
-        this.physics.add.overlap(attackZone, enemies, (zone, enemy) => {
-          enemy.destroy();
-        });
+        const direction = player.flipX ? -1 : 1;
+        bullet.setVelocityX(direction * 400);
 
         setTimeout(() => {
-          attackZone.destroy();
+          if (bullet && bullet.active) {
+            bullet.destroy();
+          }
           canAttack = true;
-        }, 200);
+        }, 2000);
       }
     }
 
