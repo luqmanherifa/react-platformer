@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Banana,
   RotateCcw,
+  Download,
 } from "lucide-react";
 
 export default function App() {
@@ -14,6 +15,8 @@ export default function App() {
   const [ammo, setAmmo] = useState(5);
   const [isMobile, setIsMobile] = useState(false);
   const [showMobileControls, setShowMobileControls] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstall, setShowInstall] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -25,6 +28,30 @@ export default function App() {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstall(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+
+    if (outcome === "accepted") {
+      setDeferredPrompt(null);
+      setShowInstall(false);
+    }
+  };
 
   useEffect(() => {
     let player;
@@ -413,6 +440,19 @@ export default function App() {
             <div className="text-2xl font-bold">Please rotate your device</div>
             <div className="text-lg mt-2">to landscape mode</div>
           </div>
+        </div>
+      )}
+
+      {showInstall && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50">
+          <button
+            onClick={handleInstall}
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg text-white font-bold text-lg shadow-lg transition-all flex items-center gap-3 animate-bounce"
+            style={{ textShadow: "2px 2px 3px rgba(0,0,0,0.5)" }}
+          >
+            <Download size={24} />
+            Install Game
+          </button>
         </div>
       )}
 
