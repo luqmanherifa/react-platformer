@@ -64,6 +64,7 @@ export default function App() {
     let keys;
     let enemies;
     let bullets;
+    let boxes;
     let canAttack = true;
     let currentAmmo = 5;
     let maxAmmo = 5;
@@ -146,6 +147,11 @@ export default function App() {
         frameWidth: 32,
         frameHeight: 32,
       });
+
+      this.load.spritesheet("box_idle", "/assets/Items/Boxes/Box1/Idle.png", {
+        frameWidth: 28,
+        frameHeight: 24,
+      });
     }
 
     function create() {
@@ -201,6 +207,29 @@ export default function App() {
           bottomBlock.refreshBody();
         }
       }
+
+      boxes = this.physics.add.staticGroup();
+
+      this.anims.create({
+        key: "box_idle",
+        frames: this.anims.generateFrameNumbers("box_idle", {
+          start: 0,
+          end: 0,
+        }),
+        frameRate: 10,
+        repeat: -1,
+      });
+
+      const boxScale = 2.5;
+      const boxMarginFromWall = 150;
+
+      const box1 = boxes.create(
+        width - boxMarginFromWall,
+        groundLevel - 30,
+        "box_idle",
+      );
+      box1.setScale(boxScale);
+      box1.refreshBody();
 
       player = this.physics.add.sprite(100, 100, "player_idle");
       player.setBounce(0.1);
@@ -292,6 +321,12 @@ export default function App() {
 
       this.physics.add.collider(player, platforms);
       this.physics.add.collider(enemies, platforms);
+
+      this.physics.add.collider(player, boxes);
+      this.physics.add.collider(enemies, boxes);
+      this.physics.add.collider(bullets, boxes, (bullet) => {
+        bullet.destroy();
+      });
 
       this.physics.add.overlap(player, enemies, () => {
         if (isGameOver) return;
